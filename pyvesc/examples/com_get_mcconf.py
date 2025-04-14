@@ -5,6 +5,7 @@ import pprint
 import pyvesc
 from pyvesc.VESC.messages import VedderCmd
 from pyvesc.protocol.base import VESCMessage
+from pyvesc import VESC
 
 # --- 설정 (이전과 동일) ---
 SERIAL_PORT = "/dev/cu.usbmodem3041"
