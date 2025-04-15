@@ -3,7 +3,7 @@ import time
 import struct
 import pprint
 import pyvesc
-from pyvesc.VESC.messages import *
+from pyvesc.VESC.messages import VedderCmd
 from pyvesc.protocol.base import VESCMessage
 from pyvesc import VESC
 
@@ -56,6 +56,20 @@ def clear_input_buffer(ser, wait_time=0.05):
             ser.read(bytes_to_read)
         except Exception as e:
             print(f"  버퍼 비우기 중 오류: {e}")
+
+
+# -----------------------------------
+
+
+# --- COMM_GET_MCCONF 요청 메시지 정의 (ID 14 - 커스텀) ---
+# 또는 표준 ID 12를 사용하고 응답 ID 14를 기다릴 수도 있습니다.
+# 우선은 요청 ID 14를 사용해봅니다.
+# class GetMcConfCustom(metaclass=VESCMessage):
+#     id = VedderCmd.COMM_GET_MCCONF  # VESC 6.05 커스텀 enum 기준
+#     fields = []
+
+
+# -----------------------------------
 
 
 # --- mc_configuration 파싱 함수 (confgenerator_serialize_mcconf 기반) ---
@@ -396,7 +410,7 @@ if __name__ == "__main__":
             clear_input_buffer(vesc_serial, wait_time=0.1)
 
             # 2. 요청 생성 및 전송 (커스텀 ID 14 사용)
-            request_packet = pyvesc.encode_request(GetMcConfRequest)
+            request_packet = pyvesc.encode_request(pyvesc.GetMcConfRequest)
             print("COMM_GET_MCCONF (ID 14) 요청 전송 중...")
             vesc_serial.write(request_packet)
             print("요청 전송 완료.")
@@ -439,8 +453,8 @@ if __name__ == "__main__":
                             "foc_cc_decoupling": 0,
                             # 'foc_control_sample_mode': 0, # 이 필드는 serialize 함수에 없음
                             "foc_current_filter_const": 0.1,
-                            "foc_current_ki": 34.45,
-                            "foc_current_kp": 0.0542,
+                            "foc_current_ki": 33.40,
+                            "foc_current_kp": 0.0532,
                         }
                         comparison_results = {}
                         all_ok = True

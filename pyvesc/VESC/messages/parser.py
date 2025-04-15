@@ -20,7 +20,7 @@ def parse_mc_conf_serialized(payload_buffer):
     def unpack_and_advance(fmt, field_name, scale=None):
         nonlocal offset
         print(
-            f"  Attempting to parse '{field_name}' at offset {offset} with format '{'>' + fmt}'..."
+            # f"  Attempting to parse '{field_name}' at offset {offset} with format '{'>' + fmt}'..."
         )  # 시도 로깅
         try:
             full_fmt = ">" + fmt
@@ -109,7 +109,7 @@ def parse_mc_conf_serialized(payload_buffer):
         fmt = ">8b"
         size = struct.calcsize(fmt)
         print(
-            f"  Attempting to parse 'hall_table' at offset {offset} with format '{fmt}'..."
+            # f"  Attempting to parse 'hall_table' at offset {offset} with format '{fmt}'..."
         )
         if offset + size > buffer_len:
             raise IndexError("Buffer length exceeded for hall_table")
@@ -154,7 +154,7 @@ def parse_mc_conf_serialized(payload_buffer):
         fmt = ">8B"
         size = struct.calcsize(fmt)
         print(
-            f"  Attempting to parse 'foc_hall_table' at offset {offset} with format '{fmt}'..."
+            # f"  Attempting to parse 'foc_hall_table' at offset {offset} with format '{fmt}'..."
         )
         if offset + size > buffer_len:
             raise IndexError("Buffer length exceeded for foc_hall_table")
@@ -190,7 +190,7 @@ def parse_mc_conf_serialized(payload_buffer):
         fmt = ">3f"
         size = struct.calcsize(fmt)
         print(
-            f"  Attempting to parse 'foc_offsets_current' at offset {offset} with format '{fmt}'..."
+            # f"  Attempting to parse 'foc_offsets_current' at offset {offset} with format '{fmt}'..."
         )
         if offset + size > buffer_len:
             raise IndexError("Buffer length exceeded for foc_offsets_current")
@@ -203,7 +203,7 @@ def parse_mc_conf_serialized(payload_buffer):
         fmt = ">3h"
         size = struct.calcsize(fmt)
         print(
-            f"  Attempting to parse 'foc_offsets_voltage' at offset {offset} with format '{fmt}'..."
+            # f"  Attempting to parse 'foc_offsets_voltage' at offset {offset} with format '{fmt}'..."
         )
         if offset + size > buffer_len:
             raise IndexError("Buffer length exceeded for foc_offsets_voltage")
@@ -218,7 +218,7 @@ def parse_mc_conf_serialized(payload_buffer):
         fmt = ">3h"
         size = struct.calcsize(fmt)
         print(
-            f"  Attempting to parse 'foc_offsets_voltage_undriven' at offset {offset} with format '{fmt}'..."
+            # f"  Attempting to parse 'foc_offsets_voltage_undriven' at offset {offset} with format '{fmt}'..."
         )
         if offset + size > buffer_len:
             raise IndexError("Buffer length exceeded for foc_offsets_voltage_undriven")

@@ -8,7 +8,7 @@ import struct  # parse 함수에서 사용될 수 있으므로 import (안전하
 
 from pyvesc.VESC.messages.getters import (
     GetMcConfRequest,
-)  # getters.py 에 정의했다고 가정
+)
 from pyvesc.VESC.messages.parser import parse_mc_conf_serialized
 from pyvesc.protocol.base import VESCMessage
 
