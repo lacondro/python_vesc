@@ -123,8 +123,8 @@ if __name__ == "__main__":
                             "comm_mode": 0,
                             "foc_cc_decoupling": 0,
                             "foc_current_filter_const": 0.1,
-                            "foc_current_ki": 33.40,
-                            "foc_current_kp": 0.0532,
+                            "foc_current_ki": 34.45,
+                            "foc_current_kp": 0.0542,
                         }
                         all_ok = True
                         for key, expected_value in vesc_tool_values.items():

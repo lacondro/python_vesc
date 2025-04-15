@@ -89,3 +89,39 @@ class Alive(metaclass=VESCMessage):
 
     id = VedderCmd.COMM_ALIVE
     fields = []
+
+
+class SetMcConf(metaclass=VESCMessage):
+    id = VedderCmd.COMM_SET_MCCONF  # 1단계에서 추가한 ID
+    fields = []
+
+
+class DetectMotorRL(metaclass=VESCMessage):
+    """모터 저항(R)과 인덕턴스(L) 측정을 시작합니다. (입력 페이로드 없음)"""
+
+    id = VedderCmd.COMM_DETECT_MOTOR_R_L
+    fields = []  # 입력 페이로드 없음
+
+
+class DetectMotorFluxLinkage(metaclass=VESCMessage):
+    """
+    모터 역기전력 상수(Flux Linkage) 측정을 시작합니다.
+    !!! 이 명령은 모터를 회전시킵니다 !!!
+    """
+
+    id = VedderCmd.COMM_DETECT_MOTOR_FLUX_LINKAGE
+    # 입력: current(A*1e3), min_rpm(RPM*1e3), duty(Ratio*1e3), resistance(Ohm*1e6) -> int32 가정
+    fields = [
+        ("current", "i", 1000),
+        ("min_rpm", "i", 1000),
+        ("duty", "i", 1000),
+        ("resistance", "i", 1000000),
+    ]
+
+
+class DetectMotorParam(metaclass=VESCMessage):
+    """범용 모터 파라미터 감지를 시작합니다."""
+
+    id = VedderCmd.COMM_DETECT_MOTOR_PARAM
+    # 입력: current(A*1e3), min_rpm(RPM*1e3), low_duty(Ratio*1e3) -> int32 가정
+    fields = [("current", "i", 1000), ("min_rpm", "i", 1000), ("low_duty", "i", 1000)]
