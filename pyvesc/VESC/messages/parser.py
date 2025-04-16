@@ -20,9 +20,9 @@ def parse_mc_conf_serialized(payload_buffer):
     # 내부 헬퍼 함수 (디버깅 로그 포함된 버전 유지)
     def unpack_and_advance(fmt, field_name, scale=None):
         nonlocal offset
-        print(
-            # f"  Attempting to parse '{field_name}' at offset {offset} with format '{'>' + fmt}'..."
-        )  # 시도 로깅
+        # print(
+        #     # f"  Attempting to parse '{field_name}' at offset {offset} with format '{'>' + fmt}'..."
+        # )  # 시도 로깅
         try:
             full_fmt = ">" + fmt
             size = struct.calcsize(full_fmt)
@@ -43,9 +43,9 @@ def parse_mc_conf_serialized(payload_buffer):
                 if isinstance(value, float) and scale is not None
                 else str(value)
             )
-            print(
-                # f"    OK: Parsed '{field_name}' = {value_repr} (offset now {offset + size}, size={size}, fmt='{full_fmt}')"
-            )  # 성공 로그
+            # print(
+            #     # f"    OK: Parsed '{field_name}' = {value_repr} (offset now {offset + size}, size={size}, fmt='{full_fmt}')"
+            # )  # 성공 로그
             offset += size
             return value
         except (struct.error, IndexError) as e:
@@ -109,16 +109,16 @@ def parse_mc_conf_serialized(payload_buffer):
         unpack_and_advance("f", "sl_bemf_coupling_k")
         fmt = ">8b"
         size = struct.calcsize(fmt)
-        print(
-            # f"  Attempting to parse 'hall_table' at offset {offset} with format '{fmt}'..."
-        )
+        # print(
+        #     # f"  Attempting to parse 'hall_table' at offset {offset} with format '{fmt}'..."
+        # )
         if offset + size > buffer_len:
             raise IndexError("Buffer length exceeded for hall_table")
         hall_table = struct.unpack_from(fmt, payload_buffer, offset)
         parsed_config["hall_table"] = list(hall_table)
-        print(
-            # f"    OK: Parsed 'hall_table' = {list(hall_table)} (offset now {offset + size}, size={size}, fmt='{fmt}')"
-        )
+        # print(
+        #     # f"    OK: Parsed 'hall_table' = {list(hall_table)} (offset now {offset + size}, size={size}, fmt='{fmt}')"
+        # )
         offset += size
         unpack_and_advance("f", "hall_sl_erpm")
         unpack_and_advance("f", "foc_current_kp")
@@ -154,16 +154,16 @@ def parse_mc_conf_serialized(payload_buffer):
         unpack_and_advance("h", "foc_sl_openloop_max_q", scale=100)
         fmt = ">8B"
         size = struct.calcsize(fmt)
-        print(
-            # f"  Attempting to parse 'foc_hall_table' at offset {offset} with format '{fmt}'..."
-        )
+        # print(
+        #     # f"  Attempting to parse 'foc_hall_table' at offset {offset} with format '{fmt}'..."
+        # )
         if offset + size > buffer_len:
             raise IndexError("Buffer length exceeded for foc_hall_table")
         foc_hall_table = struct.unpack_from(fmt, payload_buffer, offset)
         parsed_config["foc_hall_table"] = list(foc_hall_table)
-        print(
-            # f"    OK: Parsed 'foc_hall_table' = {list(foc_hall_table)} (offset now {offset + size}, size={size}, fmt='{fmt}')"
-        )
+        # print(
+        #     # f"    OK: Parsed 'foc_hall_table' = {list(foc_hall_table)} (offset now {offset + size}, size={size}, fmt='{fmt}')"
+        # )
         offset += size
         unpack_and_advance("f", "foc_hall_interp_erpm")
         unpack_and_advance("f", "foc_sl_erpm_start")
@@ -190,37 +190,37 @@ def parse_mc_conf_serialized(payload_buffer):
         unpack_and_advance("?", "foc_offsets_cal_on_boot")
         fmt = ">3f"
         size = struct.calcsize(fmt)
-        print(
-            # f"  Attempting to parse 'foc_offsets_current' at offset {offset} with format '{fmt}'..."
-        )
+        # print(
+        #     # f"  Attempting to parse 'foc_offsets_current' at offset {offset} with format '{fmt}'..."
+        # )
         if offset + size > buffer_len:
             raise IndexError("Buffer length exceeded for foc_offsets_current")
         foc_offsets_current = struct.unpack_from(fmt, payload_buffer, offset)
         parsed_config["foc_offsets_current"] = list(foc_offsets_current)
-        print(
-            # f"    OK: Parsed 'foc_offsets_current' = {list(foc_offsets_current)} (offset now {offset + size}, size={size}, fmt='{fmt}')"
-        )
+        # print(
+        #     # f"    OK: Parsed 'foc_offsets_current' = {list(foc_offsets_current)} (offset now {offset + size}, size={size}, fmt='{fmt}')"
+        # )
         offset += size
         fmt = ">3h"
         size = struct.calcsize(fmt)
-        print(
-            # f"  Attempting to parse 'foc_offsets_voltage' at offset {offset} with format '{fmt}'..."
-        )
+        # print(
+        #     # f"  Attempting to parse 'foc_offsets_voltage' at offset {offset} with format '{fmt}'..."
+        # )
         if offset + size > buffer_len:
             raise IndexError("Buffer length exceeded for foc_offsets_voltage")
         foc_offsets_voltage_raw = struct.unpack_from(fmt, payload_buffer, offset)
         parsed_config["foc_offsets_voltage"] = [
             v / 10000.0 for v in foc_offsets_voltage_raw
         ]
-        print(
-            # f"    OK: Parsed 'foc_offsets_voltage' = {[f'{v:.4f}' for v in parsed_config['foc_offsets_voltage']]} (offset now {offset + size}, size={size}, fmt='{fmt}')"
-        )
+        # print(
+        #     # f"    OK: Parsed 'foc_offsets_voltage' = {[f'{v:.4f}' for v in parsed_config['foc_offsets_voltage']]} (offset now {offset + size}, size={size}, fmt='{fmt}')"
+        # )
         offset += size
         fmt = ">3h"
         size = struct.calcsize(fmt)
-        print(
-            # f"  Attempting to parse 'foc_offsets_voltage_undriven' at offset {offset} with format '{fmt}'..."
-        )
+        # print(
+        #     # f"  Attempting to parse 'foc_offsets_voltage_undriven' at offset {offset} with format '{fmt}'..."
+        # )
         if offset + size > buffer_len:
             raise IndexError("Buffer length exceeded for foc_offsets_voltage_undriven")
         foc_offsets_voltage_undriven_raw = struct.unpack_from(
@@ -229,9 +229,9 @@ def parse_mc_conf_serialized(payload_buffer):
         parsed_config["foc_offsets_voltage_undriven"] = [
             v / 10000.0 for v in foc_offsets_voltage_undriven_raw
         ]
-        print(
-            # f"    OK: Parsed 'foc_offsets_voltage_undriven' = {[f'{v:.4f}' for v in parsed_config['foc_offsets_voltage_undriven']]} (offset now {offset + size}, size={size}, fmt='{fmt}')"
-        )
+        # print(
+        #     # f"    OK: Parsed 'foc_offsets_voltage_undriven' = {[f'{v:.4f}' for v in parsed_config['foc_offsets_voltage_undriven']]} (offset now {offset + size}, size={size}, fmt='{fmt}')"
+        # )
         offset += size
         unpack_and_advance("?", "foc_phase_filter_enable")
         unpack_and_advance("?", "foc_phase_filter_disable_fault")
