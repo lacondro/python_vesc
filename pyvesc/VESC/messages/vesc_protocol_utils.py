@@ -5,11 +5,11 @@ import traceback
 
 # !!!!! 경로 확인 필요: frame 함수 위치 !!!!!
 try:
-    from pyvesc.protocol.packet.codec import frame
+    from pyvesc.protocol.packet.codec import *
 except ImportError:
     # 대체 경로 시도
     try:
-        from pyvesc.protocol.packet.codec import frame
+        from pyvesc.protocol.packet.codec import *
     except ImportError as e:
         print(
             f"오류(vesc_protocol_utils): 'frame' 함수 import 실패. pyvesc 라이브러리 구조 확인 필요. ({e})"
@@ -19,10 +19,10 @@ except ImportError:
 # 필요한 메시지 클래스 및 페이로드 생성 함수 import
 # !!!!! 아래 경로는 실제 프로젝트 구조에 맞게 조정 필요 !!!!!
 try:
-    from pyvesc.VESC.messages.setters import SetMcConf, DetectApplyAllFOC
+    from pyvesc.VESC.messages.setters import *
 
     # pack_mc_conf_serialized 함수가 있는 위치에서 import
-    from pyvesc.VESC.messages.parser import pack_mc_conf_serialized
+    from pyvesc.VESC.messages.parser import *
 except ImportError as e:
     print(
         f"오류(vesc_protocol_utils): 필요한 클래스/함수 import 실패. 경로 확인 필요. ({e})"
@@ -106,4 +106,29 @@ def encode_detect_apply_all_foc(message: DetectApplyAllFOC):
         raise
 
 
-# --- 다른 필요한 인코딩 헬퍼 함수들 추가 가능 ---
+def encode_set_appconf(message: SetAppConf):
+    """SetAppConf 메시지(ID 16)를 VESC 통신 패킷으로 인코딩합니다."""
+    if not isinstance(message, SetAppConf):
+        raise TypeError("...")
+    if not hasattr(message, "app_configuration"):
+        raise AttributeError("...")  # 속성 이름 확인
+
+    try:
+        print("  (Util) Packer 함수(pack_app_conf_serialized) 호출...")
+        # !!!!! APPCONF 패커 함수 호출 !!!!!
+        data_payload = pack_app_conf_serialized(message.app_configuration)
+        if not data_payload:
+            raise ValueError("APPCONF Packer 빈 데이터 반환")
+
+        command_id_byte = bytes([message.id])  # ID: 16
+        full_payload = command_id_byte + data_payload
+        print(f"  (Util) pyvesc.protocol.packet.codec.frame 함수 호출...")
+        final_packet = frame(full_payload)
+        return final_packet
+    except KeyError as e:
+        print(f"!!! (Util) 패킹 오류 (KeyError): '{e}'.")
+        raise
+    except Exception as e:
+        print(f"!!! (Util) SetAppConf 인코딩 오류: {e}")
+        traceback.print_exc()
+        raise

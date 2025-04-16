@@ -158,3 +158,10 @@ class DetectApplyAllFOC(metaclass=VESCMessage):
         ("openloop_rpm", "i", 1000),
         ("sl_erpm", "i", 1000),
     ]
+
+
+class SetAppConf(metaclass=VESCMessage):
+    """어플리케이션 설정(APPCONF)을 VESC에 씁니다."""
+
+    id = VedderCmd.COMM_SET_APPCONF
+    fields = []

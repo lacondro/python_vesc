@@ -88,3 +88,10 @@ class GetMcConfRequest(metaclass=VESCMessage):
 
     id = VedderCmd.COMM_GET_MCCONF
     fields = []
+
+
+class GetAppConfRequest(metaclass=VESCMessage):
+    """어플리케이션 설정(APPCONF)을 요청합니다."""
+
+    id = VedderCmd.COMM_GET_APPCONF
+    fields = []

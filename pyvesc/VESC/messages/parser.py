@@ -3,6 +3,7 @@ import struct
 import math
 import pprint
 import traceback  # 상세 오류 출력을 위해 임포트
+import copy
 
 
 # --- mc_configuration 파싱 함수 (최종 디버깅 버전) ---
@@ -809,3 +810,431 @@ def pack_mc_conf_serialized(config_dict):
     #     print(f"[DEBUG] 경고: 패킹 후 config_dict에 처리되지 않은 키가 남아있습니다: {remaining_keys}")
 
     return bytes(packed_data)  # 불변 바이트 객체 반환
+
+
+# ==============================================================
+# =================== APPCONF 파서 함수 =======================
+# ==============================================================
+def parse_app_conf_serialized(payload_buffer):
+    """VESC APPCONF 응답 페이로드를 파싱합니다."""
+    parsed_config = {}
+    offset = 0
+    buffer_len = len(payload_buffer)
+    print(f"APPCONF 파싱 시작 (페이로드 크기: {buffer_len})...")
+    if buffer_len < 4:
+        print("오류: 페이로드 길이 너무 짧음")
+        return None
+
+    # 내부 헬퍼 함수
+    def unpack_and_advance(fmt, field_name, scale=None, is_array=False, array_len=0):
+        nonlocal offset
+        try:
+            processed_value = None
+            full_fmt = ">" + fmt
+            size = struct.calcsize(full_fmt)
+            if is_array:
+                full_fmt = f">{array_len}{fmt}"
+                size = struct.calcsize(full_fmt)
+                if offset + size > buffer_len:
+                    raise IndexError("배열 길이 초과")
+                values = struct.unpack_from(full_fmt, payload_buffer, offset)
+                if scale is not None and scale != 0 and fmt == "h":
+                    processed_value = [float(v) / scale for v in values]
+                else:
+                    processed_value = list(values)
+                parsed_config[field_name] = processed_value
+            else:
+                if offset + size > buffer_len:
+                    raise IndexError("단일 값 길이 초과")
+                value = struct.unpack_from(full_fmt, payload_buffer, offset)[0]
+                if scale is not None and scale != 0:
+                    processed_value = float(value) / scale
+                elif fmt == "?":
+                    processed_value = bool(value)
+                else:
+                    processed_value = value
+                parsed_config[field_name] = processed_value
+            offset += size
+            return processed_value
+        except Exception as e:
+            print(f"\n!!! 오류: '{field_name}' 파싱 중 {e} (offset={offset})")
+            raise
+
+    try:
+        # --- Deserialize 순서대로 파싱 ---
+        unpack_and_advance("I", "APPCONF_SIGNATURE")  # Signature 읽어서 저장
+        # General
+        unpack_and_advance("B", "controller_id")
+        unpack_and_advance("I", "timeout_msec")
+        unpack_and_advance("f", "timeout_brake_current")
+        unpack_and_advance("H", "can_status_rate_1")
+        unpack_and_advance("H", "can_status_rate_2")
+        unpack_and_advance("B", "can_status_msgs_r1")
+        unpack_and_advance("B", "can_status_msgs_r2")
+        unpack_and_advance("B", "can_baud_rate")
+        unpack_and_advance("?", "pairing_done")
+        unpack_and_advance("?", "permanent_uart_enabled")
+        unpack_and_advance("B", "shutdown_mode")
+        unpack_and_advance("B", "can_mode")
+        unpack_and_advance("B", "uavcan_esc_index")
+        unpack_and_advance("B", "uavcan_raw_mode")
+        unpack_and_advance("f", "uavcan_raw_rpm_max")
+        unpack_and_advance("B", "uavcan_status_current_mode")
+        unpack_and_advance("?", "servo_out_enable")
+        unpack_and_advance("B", "kill_sw_mode")
+        unpack_and_advance("B", "app_to_use")
+        # PPM App
+        unpack_and_advance("B", "app_ppm_conf.ctrl_type")
+        unpack_and_advance("f", "app_ppm_conf.pid_max_erpm")
+        unpack_and_advance("f", "app_ppm_conf.hyst")
+        unpack_and_advance("f", "app_ppm_conf.pulse_start")
+        unpack_and_advance("f", "app_ppm_conf.pulse_end")
+        unpack_and_advance("f", "app_ppm_conf.pulse_center")
+        unpack_and_advance("?", "app_ppm_conf.median_filter")
+        unpack_and_advance("?", "app_ppm_conf.safe_start")
+        unpack_and_advance("f", "app_ppm_conf.throttle_exp")
+        unpack_and_advance("f", "app_ppm_conf.throttle_exp_brake")
+        unpack_and_advance("B", "app_ppm_conf.throttle_exp_mode")
+        unpack_and_advance("f", "app_ppm_conf.ramp_time_pos")
+        unpack_and_advance("f", "app_ppm_conf.ramp_time_neg")
+        unpack_and_advance("?", "app_ppm_conf.multi_esc")
+        unpack_and_advance("?", "app_ppm_conf.tc")
+        unpack_and_advance("f", "app_ppm_conf.tc_max_diff")
+        unpack_and_advance("h", "app_ppm_conf.max_erpm_for_dir", scale=1)
+        unpack_and_advance("f", "app_ppm_conf.smart_rev_max_duty")
+        unpack_and_advance("f", "app_ppm_conf.smart_rev_ramp_time")
+        # ADC App
+        unpack_and_advance("B", "app_adc_conf.ctrl_type")
+        unpack_and_advance("f", "app_adc_conf.hyst")
+        unpack_and_advance("h", "app_adc_conf.voltage_start", scale=1000)
+        unpack_and_advance("h", "app_adc_conf.voltage_end", scale=1000)
+        unpack_and_advance("h", "app_adc_conf.voltage_min", scale=1000)
+        unpack_and_advance("h", "app_adc_conf.voltage_max", scale=1000)
+        unpack_and_advance("h", "app_adc_conf.voltage_center", scale=1000)
+        unpack_and_advance("h", "app_adc_conf.voltage2_start", scale=1000)
+        unpack_and_advance("h", "app_adc_conf.voltage2_end", scale=1000)
+        unpack_and_advance("?", "app_adc_conf.use_filter")
+        unpack_and_advance("?", "app_adc_conf.safe_start")
+        unpack_and_advance("?", "app_adc_conf.buttons")
+        unpack_and_advance("?", "app_adc_conf.voltage_inverted")
+        unpack_and_advance("?", "app_adc_conf.voltage2_inverted")
+        unpack_and_advance("f", "app_adc_conf.throttle_exp")
+        unpack_and_advance("f", "app_adc_conf.throttle_exp_brake")
+        unpack_and_advance("B", "app_adc_conf.throttle_exp_mode")
+        unpack_and_advance("f", "app_adc_conf.ramp_time_pos")
+        unpack_and_advance("f", "app_adc_conf.ramp_time_neg")
+        unpack_and_advance("?", "app_adc_conf.multi_esc")
+        unpack_and_advance("?", "app_adc_conf.tc")
+        unpack_and_advance("f", "app_adc_conf.tc_max_diff")
+        unpack_and_advance("H", "app_adc_conf.update_rate_hz")
+        # UART App
+        unpack_and_advance("I", "app_uart_baudrate")
+        # Chuk App
+        unpack_and_advance("B", "app_chuk_conf.ctrl_type")
+        unpack_and_advance("f", "app_chuk_conf.hyst")
+        unpack_and_advance("f", "app_chuk_conf.ramp_time_pos")
+        unpack_and_advance("f", "app_chuk_conf.ramp_time_neg")
+        unpack_and_advance("f", "app_chuk_conf.stick_erpm_per_s_in_cc")
+        unpack_and_advance("f", "app_chuk_conf.throttle_exp")
+        unpack_and_advance("f", "app_chuk_conf.throttle_exp_brake")
+        unpack_and_advance("B", "app_chuk_conf.throttle_exp_mode")
+        unpack_and_advance("?", "app_chuk_conf.multi_esc")
+        unpack_and_advance("?", "app_chuk_conf.tc")
+        unpack_and_advance("f", "app_chuk_conf.tc_max_diff")
+        unpack_and_advance("?", "app_chuk_conf.use_smart_rev")
+        unpack_and_advance("f", "app_chuk_conf.smart_rev_max_duty")
+        unpack_and_advance("f", "app_chuk_conf.smart_rev_ramp_time")
+        # NRF App
+        unpack_and_advance("B", "app_nrf_conf.speed")
+        unpack_and_advance("B", "app_nrf_conf.power")
+        unpack_and_advance("B", "app_nrf_conf.crc_type")
+        unpack_and_advance("B", "app_nrf_conf.retry_delay")
+        unpack_and_advance("b", "app_nrf_conf.retries")  # int8
+        unpack_and_advance("b", "app_nrf_conf.channel")  # int8
+        # NRF Address (uint8[3]) - 개별 처리 방식
+        unpack_and_advance("B", "app_nrf_conf.address[0]")
+        unpack_and_advance("B", "app_nrf_conf.address[1]")
+        unpack_and_advance("B", "app_nrf_conf.address[2]")
+        unpack_and_advance("?", "app_nrf_conf.send_crc_ack")
+        # PAS App
+        unpack_and_advance("B", "app_pas_conf.ctrl_type")
+        unpack_and_advance("B", "app_pas_conf.sensor_type")
+        unpack_and_advance("h", "app_pas_conf.current_scaling", scale=1000)
+        unpack_and_advance("h", "app_pas_conf.pedal_rpm_start", scale=10)
+        unpack_and_advance("h", "app_pas_conf.pedal_rpm_end", scale=10)
+        unpack_and_advance("?", "app_pas_conf.invert_pedal_direction")
+        unpack_and_advance("H", "app_pas_conf.magnets")
+        unpack_and_advance("?", "app_pas_conf.use_filter")
+        unpack_and_advance("h", "app_pas_conf.ramp_time_pos", scale=100)
+        unpack_and_advance("h", "app_pas_conf.ramp_time_neg", scale=100)
+        unpack_and_advance("H", "app_pas_conf.update_rate_hz")
+        # IMU Settings
+        unpack_and_advance("B", "imu_conf.type")
+        unpack_and_advance("B", "imu_conf.mode")
+        unpack_and_advance("B", "imu_conf.filter")
+        unpack_and_advance("h", "imu_conf.accel_lowpass_filter_x", scale=1)
+        unpack_and_advance("h", "imu_conf.accel_lowpass_filter_y", scale=1)
+        unpack_and_advance("h", "imu_conf.accel_lowpass_filter_z", scale=1)
+        unpack_and_advance("h", "imu_conf.gyro_lowpass_filter", scale=1)
+        unpack_and_advance("H", "imu_conf.sample_rate_hz")
+        unpack_and_advance("?", "imu_conf.use_magnetometer")
+        unpack_and_advance("f", "imu_conf.accel_confidence_decay")
+        unpack_and_advance("f", "imu_conf.mahony_kp")
+        unpack_and_advance("f", "imu_conf.mahony_ki")
+        unpack_and_advance("f", "imu_conf.madgwick_beta")
+        unpack_and_advance("f", "imu_conf.rot_roll")
+        unpack_and_advance("f", "imu_conf.rot_pitch")
+        unpack_and_advance("f", "imu_conf.rot_yaw")
+        # IMU Accel Offsets (float32[3]) - 개별 처리 방식
+        unpack_and_advance("f", "imu_conf.accel_offsets[0]")
+        unpack_and_advance("f", "imu_conf.accel_offsets[1]")
+        unpack_and_advance("f", "imu_conf.accel_offsets[2]")
+        # IMU Gyro Offsets (float32[3]) - 개별 처리 방식
+        unpack_and_advance("f", "imu_conf.gyro_offsets[0]")
+        unpack_and_advance("f", "imu_conf.gyro_offsets[1]")
+        unpack_and_advance("f", "imu_conf.gyro_offsets[2]")
+
+        print(f"APPCONF 파싱 완료. 최종 오프셋: {offset}")
+        if offset != buffer_len:
+            print("경고: 파싱 후 오프셋 != 버퍼 길이")
+        return parsed_config
+    except Exception as e:
+        print(f"!!! APPCONF 파싱 중 오류: {e}")
+        traceback.print_exc()
+        return parsed_config
+
+
+# --- APPCONF 패커 함수 (Signature 자동 처리) ---
+def pack_app_conf_serialized(config_dict_in):
+    packed_data = bytearray()
+    config_dict = copy.deepcopy(config_dict_in)
+    print("APPCONF 패킹 시작 (딕셔너리 내 Signature 사용)...")
+    try:
+        signature_to_pack = config_dict.pop("APPCONF_SIGNATURE")
+    except KeyError:
+        raise KeyError("Packer 오류: 입력 dict에 'APPCONF_SIGNATURE' 키 없음")
+    packed_data.extend(struct.pack(">I", signature_to_pack))
+
+    # !!!!! 수정된 내부 헬퍼 함수 !!!!!
+    def _pack_value(fmt, field_name, scale=None, is_array=False, array_len=0):
+        nonlocal packed_data
+        key_to_lookup = field_name  # 기본적으로 field_name을 키로 사용
+
+        # is_array 플래그는 이제 배열 전체를 한 번에 처리할 때만 사용
+        # 개별 요소 접근 시에는 이 플래그가 False임
+        if not is_array and "[" in field_name and "]" in field_name:
+            # 개별 배열 요소 키 (예: 'addr[0]')는 그대로 사용
+            key_to_lookup = field_name
+        elif is_array:
+            # 배열 전체 처리 시에는 field_name (예: 'addr_list') 사용
+            key_to_lookup = field_name
+        # 그 외 일반 필드도 field_name 사용
+
+        # 키 존재 확인 및 값 가져오기
+        if key_to_lookup not in config_dict:
+            if field_name == "crc":
+                return  # CRC 무시
+            # 키가 없으면 오류 발생시키는 것이 더 안전할 수 있음
+            # 또는 기본값 사용 (주의 필요)
+            print(f"!!! 경고: 필수 필드 키 '{key_to_lookup}' 없음! 기본값 0 사용.")
+            value = 0  # 또는 타입에 맞는 기본값 (0.0 등)
+            # raise KeyError(f"필수 필드 '{key_to_lookup}' 없음") # 엄격하게 하려면 오류 발생
+        else:
+            value = config_dict[key_to_lookup]
+
+        original_value_repr = repr(value)
+
+        try:
+            packed_value_bytes = b""
+            processed_value_repr = original_value_repr
+
+            if is_array:  # 배열 전체를 한 번에 패킹 (호출 시 is_array=True)
+                if not isinstance(value, (list, tuple)):
+                    raise TypeError("...")
+                if len(value) != array_len:
+                    raise ValueError("...")
+                full_fmt = f">{array_len}{fmt}"
+                values_to_pack = []
+                if scale is not None and scale != 0 and fmt == "h":  # float16 배열
+                    scaled_list = []
+                    for v_item in value:
+                        scaled = int(round(float(v_item) * scale))
+                        if not (-32768 <= scaled <= 32767):
+                            scaled = max(-32768, min(32767, scaled))
+                        scaled_list.append(scaled)
+                    values_to_pack = scaled_list
+                    processed_value_repr = repr(scaled_list)
+                else:
+                    values_to_pack = list(value)
+                packed_value_bytes = struct.pack(full_fmt, *values_to_pack)
+            else:  # 단일 값 또는 개별 배열 요소 패킹 (is_array=False)
+                processed_value = value
+                full_fmt = f">{fmt}"
+                # 타입 변환 및 스케일링 (이전과 동일)
+                if fmt == "f":
+                    processed_value = float(value)
+                elif fmt == "h":
+                    if scale is None:
+                        raise ValueError("...")
+                    processed_value = int(round(float(value) * scale))
+                    if not (-32768 <= processed_value <= 32767):
+                        processed_value = max(-32768, min(32767, processed_value))
+                elif fmt == "i":
+                    processed_value = int(value)
+                elif fmt == "I":
+                    processed_value = int(value)
+                    if not (0 <= processed_value <= 4294967295):
+                        processed_value = max(0, min(4294967295, processed_value))
+                elif fmt == "b":
+                    processed_value = int(value)
+                    if not (-128 <= processed_value <= 127):
+                        processed_value = max(-128, min(127, processed_value))
+                elif fmt == "B":
+                    if isinstance(value, float):
+                        processed_value = int(round(value))
+                    else:
+                        processed_value = int(value)
+                    if not (0 <= processed_value <= 255):
+                        processed_value = max(0, min(255, processed_value))
+                elif fmt == "H":
+                    processed_value = int(value)
+                    if not (0 <= processed_value <= 65535):
+                        processed_value = max(0, min(65535, processed_value))
+                elif fmt == "?":
+                    processed_value = int(bool(value))
+                else:
+                    raise ValueError("...")
+                packed_value_bytes = struct.pack(full_fmt, processed_value)
+            packed_data.extend(packed_value_bytes)
+        except (struct.error, TypeError, ValueError) as e:
+            print(f"\n!!! 오류: 필드 '{field_name}' 패킹 중 오류 !!!")
+            raise
+
+    try:
+        # --- confgenerator_serialize_appconf 순서대로 나머지 필드 패킹 ---
+        _pack_value("B", "controller_id")
+        _pack_value("I", "timeout_msec")
+        _pack_value("f", "timeout_brake_current")
+        _pack_value("H", "can_status_rate_1")
+        _pack_value("H", "can_status_rate_2")
+        _pack_value("B", "can_status_msgs_r1")
+        _pack_value("B", "can_status_msgs_r2")
+        _pack_value("B", "can_baud_rate")
+        _pack_value("?", "pairing_done")
+        _pack_value("?", "permanent_uart_enabled")
+        _pack_value("B", "shutdown_mode")
+        _pack_value("B", "can_mode")
+        _pack_value("B", "uavcan_esc_index")
+        _pack_value("B", "uavcan_raw_mode")
+        _pack_value("f", "uavcan_raw_rpm_max")
+        _pack_value("B", "uavcan_status_current_mode")
+        _pack_value("?", "servo_out_enable")
+        _pack_value("B", "kill_sw_mode")
+        _pack_value("B", "app_to_use")
+        _pack_value("B", "app_ppm_conf.ctrl_type")
+        _pack_value("f", "app_ppm_conf.pid_max_erpm")
+        _pack_value("f", "app_ppm_conf.hyst")
+        _pack_value("f", "app_ppm_conf.pulse_start")
+        _pack_value("f", "app_ppm_conf.pulse_end")
+        _pack_value("f", "app_ppm_conf.pulse_center")
+        _pack_value("?", "app_ppm_conf.median_filter")
+        _pack_value("?", "app_ppm_conf.safe_start")
+        _pack_value("f", "app_ppm_conf.throttle_exp")
+        _pack_value("f", "app_ppm_conf.throttle_exp_brake")
+        _pack_value("B", "app_ppm_conf.throttle_exp_mode")
+        _pack_value("f", "app_ppm_conf.ramp_time_pos")
+        _pack_value("f", "app_ppm_conf.ramp_time_neg")
+        _pack_value("?", "app_ppm_conf.multi_esc")
+        _pack_value("?", "app_ppm_conf.tc")
+        _pack_value("f", "app_ppm_conf.tc_max_diff")
+        _pack_value("h", "app_ppm_conf.max_erpm_for_dir", scale=1)
+        _pack_value("f", "app_ppm_conf.smart_rev_max_duty")
+        _pack_value("f", "app_ppm_conf.smart_rev_ramp_time")
+        _pack_value("B", "app_adc_conf.ctrl_type")
+        _pack_value("f", "app_adc_conf.hyst")
+        _pack_value("h", "app_adc_conf.voltage_start", scale=1000)
+        _pack_value("h", "app_adc_conf.voltage_end", scale=1000)
+        _pack_value("h", "app_adc_conf.voltage_min", scale=1000)
+        _pack_value("h", "app_adc_conf.voltage_max", scale=1000)
+        _pack_value("h", "app_adc_conf.voltage_center", scale=1000)
+        _pack_value("h", "app_adc_conf.voltage2_start", scale=1000)
+        _pack_value("h", "app_adc_conf.voltage2_end", scale=1000)
+        _pack_value("?", "app_adc_conf.use_filter")
+        _pack_value("?", "app_adc_conf.safe_start")
+        _pack_value("?", "app_adc_conf.buttons")
+        _pack_value("?", "app_adc_conf.voltage_inverted")
+        _pack_value("?", "app_adc_conf.voltage2_inverted")
+        _pack_value("f", "app_adc_conf.throttle_exp")
+        _pack_value("f", "app_adc_conf.throttle_exp_brake")
+        _pack_value("B", "app_adc_conf.throttle_exp_mode")
+        _pack_value("f", "app_adc_conf.ramp_time_pos")
+        _pack_value("f", "app_adc_conf.ramp_time_neg")
+        _pack_value("?", "app_adc_conf.multi_esc")
+        _pack_value("?", "app_adc_conf.tc")
+        _pack_value("f", "app_adc_conf.tc_max_diff")
+        _pack_value("H", "app_adc_conf.update_rate_hz")
+        _pack_value("I", "app_uart_baudrate")
+        _pack_value("B", "app_chuk_conf.ctrl_type")
+        _pack_value("f", "app_chuk_conf.hyst")
+        _pack_value("f", "app_chuk_conf.ramp_time_pos")
+        _pack_value("f", "app_chuk_conf.ramp_time_neg")
+        _pack_value("f", "app_chuk_conf.stick_erpm_per_s_in_cc")
+        _pack_value("f", "app_chuk_conf.throttle_exp")
+        _pack_value("f", "app_chuk_conf.throttle_exp_brake")
+        _pack_value("B", "app_chuk_conf.throttle_exp_mode")
+        _pack_value("?", "app_chuk_conf.multi_esc")
+        _pack_value("?", "app_chuk_conf.tc")
+        _pack_value("f", "app_chuk_conf.tc_max_diff")
+        _pack_value("?", "app_chuk_conf.use_smart_rev")
+        _pack_value("f", "app_chuk_conf.smart_rev_max_duty")
+        _pack_value("f", "app_chuk_conf.smart_rev_ramp_time")
+        _pack_value("B", "app_nrf_conf.speed")
+        _pack_value("B", "app_nrf_conf.power")
+        _pack_value("B", "app_nrf_conf.crc_type")
+        _pack_value("B", "app_nrf_conf.retry_delay")
+        _pack_value("b", "app_nrf_conf.retries")
+        _pack_value("b", "app_nrf_conf.channel")
+        _pack_value("B", "app_nrf_conf.address[0]")
+        _pack_value("B", "app_nrf_conf.address[1]")
+        _pack_value("B", "app_nrf_conf.address[2]")
+        _pack_value("?", "app_nrf_conf.send_crc_ack")
+        _pack_value("B", "app_pas_conf.ctrl_type")
+        _pack_value("B", "app_pas_conf.sensor_type")
+        _pack_value("h", "app_pas_conf.current_scaling", scale=1000)
+        _pack_value("h", "app_pas_conf.pedal_rpm_start", scale=10)
+        _pack_value("h", "app_pas_conf.pedal_rpm_end", scale=10)
+        _pack_value("?", "app_pas_conf.invert_pedal_direction")
+        _pack_value("H", "app_pas_conf.magnets")
+        _pack_value("?", "app_pas_conf.use_filter")
+        _pack_value("h", "app_pas_conf.ramp_time_pos", scale=100)
+        _pack_value("h", "app_pas_conf.ramp_time_neg", scale=100)
+        _pack_value("H", "app_pas_conf.update_rate_hz")
+        _pack_value("B", "imu_conf.type")
+        _pack_value("B", "imu_conf.mode")
+        _pack_value("B", "imu_conf.filter")
+        _pack_value("h", "imu_conf.accel_lowpass_filter_x", scale=1)
+        _pack_value("h", "imu_conf.accel_lowpass_filter_y", scale=1)
+        _pack_value("h", "imu_conf.accel_lowpass_filter_z", scale=1)
+        _pack_value("h", "imu_conf.gyro_lowpass_filter", scale=1)
+        _pack_value("H", "imu_conf.sample_rate_hz")
+        _pack_value("?", "imu_conf.use_magnetometer")
+        _pack_value("f", "imu_conf.accel_confidence_decay")
+        _pack_value("f", "imu_conf.mahony_kp")
+        _pack_value("f", "imu_conf.mahony_ki")
+        _pack_value("f", "imu_conf.madgwick_beta")
+        _pack_value("f", "imu_conf.rot_roll")
+        _pack_value("f", "imu_conf.rot_pitch")
+        _pack_value("f", "imu_conf.rot_yaw")
+        _pack_value("f", "imu_conf.accel_offsets[0]")
+        _pack_value("f", "imu_conf.accel_offsets[1]")
+        _pack_value("f", "imu_conf.accel_offsets[2]")
+        _pack_value("f", "imu_conf.gyro_offsets[0]")
+        _pack_value("f", "imu_conf.gyro_offsets[1]")
+        _pack_value("f", "imu_conf.gyro_offsets[2]")
+
+        print(f"APPCONF 패킹 완료. 최종 크기: {len(packed_data)}")
+        return bytes(packed_data)
+    except Exception as e:
+        print(f"!!! APPCONF 패킹 중 오류: {e}")
+        traceback.print_exc()
+        return None
