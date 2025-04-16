@@ -44,7 +44,7 @@ def parse_mc_conf_serialized(payload_buffer):
                 else str(value)
             )
             print(
-                f"    OK: Parsed '{field_name}' = {value_repr} (offset now {offset + size}, size={size}, fmt='{full_fmt}')"
+                # f"    OK: Parsed '{field_name}' = {value_repr} (offset now {offset + size}, size={size}, fmt='{full_fmt}')"
             )  # 성공 로그
             offset += size
             return value
@@ -117,7 +117,7 @@ def parse_mc_conf_serialized(payload_buffer):
         hall_table = struct.unpack_from(fmt, payload_buffer, offset)
         parsed_config["hall_table"] = list(hall_table)
         print(
-            f"    OK: Parsed 'hall_table' = {list(hall_table)} (offset now {offset + size}, size={size}, fmt='{fmt}')"
+            # f"    OK: Parsed 'hall_table' = {list(hall_table)} (offset now {offset + size}, size={size}, fmt='{fmt}')"
         )
         offset += size
         unpack_and_advance("f", "hall_sl_erpm")
@@ -162,7 +162,7 @@ def parse_mc_conf_serialized(payload_buffer):
         foc_hall_table = struct.unpack_from(fmt, payload_buffer, offset)
         parsed_config["foc_hall_table"] = list(foc_hall_table)
         print(
-            f"    OK: Parsed 'foc_hall_table' = {list(foc_hall_table)} (offset now {offset + size}, size={size}, fmt='{fmt}')"
+            # f"    OK: Parsed 'foc_hall_table' = {list(foc_hall_table)} (offset now {offset + size}, size={size}, fmt='{fmt}')"
         )
         offset += size
         unpack_and_advance("f", "foc_hall_interp_erpm")
@@ -198,7 +198,7 @@ def parse_mc_conf_serialized(payload_buffer):
         foc_offsets_current = struct.unpack_from(fmt, payload_buffer, offset)
         parsed_config["foc_offsets_current"] = list(foc_offsets_current)
         print(
-            f"    OK: Parsed 'foc_offsets_current' = {list(foc_offsets_current)} (offset now {offset + size}, size={size}, fmt='{fmt}')"
+            # f"    OK: Parsed 'foc_offsets_current' = {list(foc_offsets_current)} (offset now {offset + size}, size={size}, fmt='{fmt}')"
         )
         offset += size
         fmt = ">3h"
@@ -213,7 +213,7 @@ def parse_mc_conf_serialized(payload_buffer):
             v / 10000.0 for v in foc_offsets_voltage_raw
         ]
         print(
-            f"    OK: Parsed 'foc_offsets_voltage' = {[f'{v:.4f}' for v in parsed_config['foc_offsets_voltage']]} (offset now {offset + size}, size={size}, fmt='{fmt}')"
+            # f"    OK: Parsed 'foc_offsets_voltage' = {[f'{v:.4f}' for v in parsed_config['foc_offsets_voltage']]} (offset now {offset + size}, size={size}, fmt='{fmt}')"
         )
         offset += size
         fmt = ">3h"
@@ -230,7 +230,7 @@ def parse_mc_conf_serialized(payload_buffer):
             v / 10000.0 for v in foc_offsets_voltage_undriven_raw
         ]
         print(
-            f"    OK: Parsed 'foc_offsets_voltage_undriven' = {[f'{v:.4f}' for v in parsed_config['foc_offsets_voltage_undriven']]} (offset now {offset + size}, size={size}, fmt='{fmt}')"
+            # f"    OK: Parsed 'foc_offsets_voltage_undriven' = {[f'{v:.4f}' for v in parsed_config['foc_offsets_voltage_undriven']]} (offset now {offset + size}, size={size}, fmt='{fmt}')"
         )
         offset += size
         unpack_and_advance("?", "foc_phase_filter_enable")
