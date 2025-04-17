@@ -13,8 +13,10 @@ pyvesc/VESC/__init__.py
 pyvesc/VESC/messages/Vedder_BLDC_Commands.py
 pyvesc/VESC/messages/__init__.py
 pyvesc/VESC/messages/getters.py
+pyvesc/VESC/messages/helper.py
 pyvesc/VESC/messages/parser.py
 pyvesc/VESC/messages/setters.py
+pyvesc/VESC/messages/vesc_protocol_utils.py
 pyvesc/protocol/__init__.py
 pyvesc/protocol/base.py
 pyvesc/protocol/interface.py
